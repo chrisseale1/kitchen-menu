@@ -53,7 +53,7 @@ const SEED_DISHES = [
     instructions: "Sauté garlic, add white beans and crushed tomatoes. Simmer until thick, fold in spinach until wilted."
   },
   {
-    name: "Vegan Egg Scramble with Peppers & Black Beans",
+    name: "Vegan Egg Scramble",
     category: "Breakfast & Scrambles",
     imageUrl: "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=700&q=80",
     tags: "Breakfast, High Protein",
@@ -139,9 +139,8 @@ let selectedCategory = 'ALL';
 
 // Helper: Convert Google Drive share links to direct streaming image URLs
 function normalizeImageUrl(url) {
-  if (!url || !url.trim()) return '';
+  if (!url || typeof url !== 'string' || !url.trim()) return '';
   const trimmed = url.trim();
-  // Check if it's a Google Drive URL
   const driveMatch = trimmed.match(/\/d\/([a-zA-Z0-9_-]+)/) || trimmed.match(/id=([a-zA-Z0-9_-]+)/);
   if (driveMatch && driveMatch[1]) {
     return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
@@ -152,13 +151,13 @@ function normalizeImageUrl(url) {
 // Fetch Google Sheet data using Google Visualization API endpoint
 async function fetchSheetData() {
   const statusEl = document.getElementById('connectionStatus');
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(TAB_NAME)}`;
+  // Pass headers=1 and select all columns explicitly
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(TAB_NAME)}`;
 
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error('Sheet network response failed');
     const text = await res.text();
-    // Parse Google's JSON wrapper
     const jsonString = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
     const data = JSON.parse(jsonString);
 
@@ -167,21 +166,25 @@ async function fetchSheetData() {
       const parsedDishes = [];
       rows.forEach(r => {
         const c = r.c;
-        const name = c[0] ? (c[0].v || '') : '';
-        const category = c[1] ? (c[1].v || '') : '';
-        const rawImg = c[2] ? (c[2].v || '') : '';
-        const tags = c[3] ? (c[3].v || '') : '';
-        const ingredients = c[4] ? (c[4].v || '') : '';
-        const instructions = c[5] ? (c[5].v || '') : '';
+        if (!c) return;
 
-        if (name && name.trim().length > 0) {
+        const name = c[0] && c[0].v != null ? String(c[0].v).trim() : '';
+        const category = c[1] && c[1].v != null ? String(c[1].v).trim() : '';
+        const rawImg = c[2] && c[2].v != null ? String(c[2].v).trim() : '';
+        const tags = c[3] && c[3].v != null ? String(c[3].v).trim() : '';
+        const ingredients = c[4] && c[4].v != null ? String(c[4].v).trim() : '';
+        const instructions = c[5] && c[5].v != null ? String(c[5].v).trim() : '';
+
+        // Strict filter: Ignore header repetition, empty names, or blank categories
+        const isHeaderRow = name.toLowerCase() === 'dish name' || category.toLowerCase() === 'category';
+        if (name.length > 0 && category.length > 0 && !isHeaderRow) {
           parsedDishes.push({
-            name: name.trim(),
-            category: category.trim() || 'Mains',
+            name: name,
+            category: category,
             imageUrl: normalizeImageUrl(rawImg),
-            tags: tags.trim(),
-            ingredients: ingredients.trim(),
-            instructions: instructions.trim()
+            tags: tags,
+            ingredients: ingredients,
+            instructions: instructions
           });
         }
       });
@@ -194,10 +197,38 @@ async function fetchSheetData() {
     }
   } catch (err) {
     console.warn('Could not load from Google Sheets live endpoint, using default seed dishes:', err);
-    statusEl.textContent = 'Using preloaded recipes (Connect Google Sheet by setting Share to Anyone with Link)';
+    statusEl.textContent = 'Using preloaded recipes (Set Google Sheet to Anyone with Link to sync live)';
   }
 
+  updateCategoryChips();
   renderMenu();
+}
+
+// Dynamically generate category chips based on actual data present
+function updateCategoryChips() {
+  const container = document.getElementById('categoryChips');
+  if (!container) return;
+
+  const cats = Array.from(new Set(allDishes.map(d => d.category.trim()).filter(Boolean)));
+  
+  // Standard emojis map
+  const emojiMap = {
+    'noodles & pasta': '🍜',
+    'bowls & skillets': '🍲',
+    'breakfast & scrambles': '🥞',
+    'burgers & mains': '🍔',
+    'soups & sides': '🥣',
+    'drinks & snacks': '🥤'
+  };
+
+  let html = `<button class="cat-chip ${selectedCategory === 'ALL' ? 'active' : ''}" data-category="ALL">All Dishes</button>`;
+  cats.forEach(cat => {
+    const icon = emojiMap[cat.toLowerCase()] || '🍴';
+    const isActive = selectedCategory.toLowerCase() === cat.toLowerCase();
+    html += `<button class="cat-chip ${isActive ? 'active' : ''}" data-category="${escapeHtml(cat)}">${icon} ${escapeHtml(cat)}</button>`;
+  });
+
+  container.innerHTML = html;
 }
 
 function renderMenu() {
@@ -223,10 +254,11 @@ function renderMenu() {
     return;
   }
 
-  // Group by category
+  // Group by category (only valid non-empty categories)
   const groups = {};
   filtered.forEach(dish => {
-    const cat = dish.category || 'Other';
+    const cat = dish.category.trim();
+    if (!cat) return;
     if (!groups[cat]) groups[cat] = [];
     groups[cat].push(dish);
   });
@@ -235,12 +267,12 @@ function renderMenu() {
   Object.keys(groups).forEach(cat => {
     html += `
       <section class="section-block">
-        <h2 class="section-header">${cat}</h2>
+        <h2 class="section-header">${escapeHtml(cat)}</h2>
         <div class="cards-grid">
-          ${groups[cat].map((dish, idx) => {
+          ${groups[cat].map(dish => {
             const fallbackImg = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=700&q=80";
             const img = dish.imageUrl || fallbackImg;
-            const tagsList = dish.tags ? dish.tags.split(',').map(t => `<span class="dish-tag">${t.trim()}</span>`).join('') : '';
+            const tagsList = dish.tags ? dish.tags.split(',').map(t => `<span class="dish-tag">${escapeHtml(t.trim())}</span>`).join('') : '';
 
             return `
               <div class="dish-card" onclick="openRecipeModal('${escapeHtml(dish.name)}')">
@@ -264,7 +296,7 @@ function renderMenu() {
 
 function escapeHtml(str) {
   if (!str) return '';
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
 function openRecipeModal(dishName) {
@@ -289,7 +321,7 @@ function openRecipeModal(dishName) {
 
   const tagsContainer = document.getElementById('modalTags');
   if (dish.tags) {
-    tagsContainer.innerHTML = dish.tags.split(',').map(t => `<span class="dish-tag">${t.trim()}</span>`).join('');
+    tagsContainer.innerHTML = dish.tags.split(',').map(t => `<span class="dish-tag">${escapeHtml(t.trim())}</span>`).join('');
   } else {
     tagsContainer.innerHTML = '';
   }
@@ -301,12 +333,13 @@ function openRecipeModal(dishName) {
 document.addEventListener('DOMContentLoaded', () => {
   fetchSheetData();
 
-  // Category filter buttons
+  // Category filter buttons delegation
   document.getElementById('categoryChips').addEventListener('click', (e) => {
-    if (e.target.classList.contains('cat-chip')) {
+    const btn = e.target.closest('.cat-chip');
+    if (btn) {
       document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
-      e.target.classList.add('active');
-      selectedCategory = e.target.getAttribute('data-category');
+      btn.classList.add('active');
+      selectedCategory = btn.getAttribute('data-category');
       renderMenu();
     }
   });
