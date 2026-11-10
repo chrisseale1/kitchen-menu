@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kitchen Menu & Recipe Board</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Bar Header -->
+    <header class="top-nav">
+      <div class="brand">
+        <div class="brand-icon">🍽️</div>
+        <div>
+          <h1>Kitchen Menu Display</h1>
+          <p class="subtitle" id="connectionStatus">Connecting to live spreadsheet...</p>
+        </div>
+      </div>
+      <div class="nav-controls">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Search dishes or ingredients...">
+        </div>
+        <button id="randomBtn" class="pill-btn surprise-btn">✨ What am I in the mood for?</button>
+        <button id="refreshBtn" class="pill-btn icon-only-btn" title="Refresh data from Sheet">🔄</button>
+      </div>
+    </header>
+
+    <!-- Category Filter Bar -->
+    <nav class="category-bar">
+      <div class="chips-container" id="categoryChips">
+        <button class="cat-chip active" data-category="ALL">All Dishes</button>
+        <button class="cat-chip" data-category="Noodles & Pasta">🍜 Noodles & Pasta</button>
+        <button class="cat-chip" data-category="Bowls & Skillets">🍲 Bowls & Skillets</button>
+        <button class="cat-chip" data-category="Breakfast & Scrambles">🥞 Breakfast & Scrambles</button>
+        <button class="cat-chip" data-category="Burgers & Mains">🍔 Burgers & Mains</button>
+        <button class="cat-chip" data-category="Soups & Sides">🥣 Soups & Sides</button>
+        <button class="cat-chip" data-category="Drinks & Snacks">🥤 Drinks & Snacks</button>
+      </div>
+    </nav>
+
+    <!-- Main Grid Container -->
+    <main class="menu-canvas">
+      <div id="menuSections" class="sections-wrap">
+        <!-- Rendered dynamically -->
+      </div>
+    </main>
+
+    <!-- Recipe Detail Modal -->
+    <div id="recipeModal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <button class="close-modal-btn" id="closeModalBtn">&times;</button>
+        <div class="modal-hero">
+          <img id="modalImg" src="" alt="Dish Preview">
+          <span id="modalCategoryBadge" class="modal-cat-badge">Category</span>
+        </div>
+        <div class="modal-body">
+          <h2 id="modalTitle">Dish Title</h2>
+          <div id="modalTags" class="modal-tags-row"></div>
+
+          <div class="modal-section">
+            <h3>Ingredients</h3>
+            <p id="modalIngredients" class="modal-text"></p>
+          </div>
+
+          <div class="modal-section" id="instructionsContainer">
+            <h3>Instructions / Prep Notes</h3>
+            <p id="modalInstructions" class="modal-text"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
