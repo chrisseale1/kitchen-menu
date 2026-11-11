@@ -218,7 +218,6 @@ function updateCategoryChips() {
     'breakfast & scrambles': '🥞',
     'burgers & mains': '🍔',
     'soups & sides': '🥣',
-    'drinks & snacks': '🥤',
     'drinks': '🥤',
     'snacks': '🍿'
   };
