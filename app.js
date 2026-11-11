@@ -218,7 +218,9 @@ function updateCategoryChips() {
     'breakfast & scrambles': '🥞',
     'burgers & mains': '🍔',
     'soups & sides': '🥣',
-    'drinks & snacks': '🥤'
+    'drinks & snacks': '🥤',
+    'drinks': '🥤',
+    'snacks': '🍿'
   };
 
   let html = `<button class="cat-chip ${selectedCategory === 'ALL' ? 'active' : ''}" data-category="ALL">All Dishes</button>`;
